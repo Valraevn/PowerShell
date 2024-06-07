@@ -1,0 +1,64 @@
+$path = "$env:OneDriveCommercial\Documents\WSLBackup"      
+$logspath = "$path\Logs\"
+$LogsName = "WSLBackup.log"
+$xmlpath = "$path\Backups"
+#$xmlconfig = "$xmlpath\wslbackupconfig.xml"
+$DistributionName = ""
+
+function Start-WSLBackup {
+    
+    #Creates a Verbose output when the -verbose parameter is passed
+    [cmdletbinding()]
+    Param(
+        [Parameter(Mandatory=$false)]
+        [string]$DistributionName
+    )
+    
+    #Tests if the log path exists
+    if (Test-Path -Path $logspath) {
+        WriteLogFile "$logspath Path Exists!"
+    }
+    else {
+        mkdir $logspath
+        WriteLogFile "Path didn't exist - Creating folder structure for $logspath"
+    }
+
+    #Gets a list of the distrobutions and then presents a screen asking which one you want backed up
+
+    if ([string]::IsNullOrEmpty($DistributionName)) {
+        $DistributionName = Get-ItemPropertyValue 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss\{*' 'DistributionName' | Out-GridView -Title "Which Distro should be backed up?" -OutputMode Single 
+    }
+
+    #Tests if there is more than one Distro
+        if ([String]::IsNullOrEmpty($DistributonName)) {
+        WriteLogFile "Distribution Selected - $DistributionName"
+    }
+    else {
+        WriteLogFile "Error - No Distribution found or selected"
+        Exit
+        
+        
+    }
+    $time = (Get-Date).toString("_dd-MM-yyyy")
+    $Filename = $DistributionName + $time
+    WriteLogFile "Creating Backup - $Filename"
+    wsl --export $DistributionName $path\$Filename.tar
+
+    if (Test-Path -Path $path\$Filename.tar) {
+    WriteLogFile "Backup was successful and is being stored as $path\$Filename"
+    }
+    else {
+        WriteLogFile "ERROR - Backup failed"
+    }
+
+    WriteLogFile "Starting up $DistributionName WSL Distribution"
+    wsl -d $DistributionName -e ls | Out-Null
+}
+
+function WriteLogFile {
+    Param([string]$LogString)
+    $Stamp = (Get-Date).toString("[dd/MM/yyyy HH:mm:ss]")
+    $LogMessage = "$Stamp $LogString"
+    Add-Content $logspath\$LogsName -Value $LogMessage
+    Write-Verbose "$LogString"
+}
