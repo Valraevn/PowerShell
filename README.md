@@ -1,2 +1,2 @@
 # PowerShell
-Various Windows scripts
+Variouse Windows scripts
